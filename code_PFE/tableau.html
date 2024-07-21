@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau</title>
+ 
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            margin-top: 50px;
+        }
+        h1 {
+            color: #007bff;
+        }
+        h2 {
+            color: #333;
+            margin-top: 20px;
+        }
+        button.btn-primary {
+            background-color: #007bff;
+            margin-bottom: 10px;
+        }
+        button.btn-primary:hover {
+            background-color: #0056b3;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        ul li {
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #fff;
+        }
+        input[type="submit"] {
+            background-color: #007bff;
+            margin-bottom: 10px;
+            padding: 5px;
+            color: white;
+    border-color:#007bff;
+    }
+
+    input[type="submit"]:hover {
+        background-color: #0056b3;
+    
+    }
+    #resultc {
+    font-weight: bold;
+  }
+    </style>
+    
+</head>
+<body>
+    <div class="container">
+        <h1>Détection et réparation des anomalies</h1>
+        <h3>Tableau de données</h3>
+        {{ table_html | safe }}
+
+        <hr>
+
+       
+        <div class="row">
+            <div class="col-md-6">
+                <h3>Contraintes existantes</h3>
+                <button id="showDependences" class="btn btn-primary">Afficher les contraintes</button>
+                <div id="dependences" style="display: none;">
+                    <!-- Le contenu des dépendances sera inséré ici -->
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <h3>Contraintes valides</h3>
+                <button id="showValidDependences" class="btn btn-primary">Afficher les contraintes </button>
+                <div id="validDependences" style="display: none;">
+                    <!-- Le contenu des dépendances validées sera inséré ici -->
+                </div>
+            </div>
+        </div>
+        <h3>Détection des anomalies</h3>
+        <button id="checkDependences" class="btn btn-primary">Detecter les anomalies</button>
+        <div id="results" style="display: none;">
+            <!-- Le contenu des résultats sera inséré ici -->
+        </div>
+        <h3>Identification des sources des anomalies</h3>
+        <button id="identifier" class="btn btn-primary">Identifier les sources des anomalies</button>
+        <div id="ident" style="display: none;">
+            <!-- Le contenu des résultats sera inséré ici -->
+        </div>
+        <h3>Réparation des contraintes</h3>
+        <h5>Réparation automatique de toutes les contraintes erronées</h5>
+        <button id="reparer" class="btn btn-primary">Réparer automatiquement</button>
+        <div id="rep" style="display: none;">
+           
+        </div>
+        <h5>Réparation semi-automatique</h5>
+    <form action="/generer_contrainte" method="get">
+        <label for="contrainte_erronee">Entrer la contrainte Erronée (Format: A → B):</label>
+        <input type="text" id="contrainte_erronee" name="contrainte_erronee" required>
+        <br>
+        <input type="submit" value="Générer Contrainte">
+    </form>
+    <p>Transformations de la contrainte erronée:</p>
+   
+    <div id="result"></div>
+    <p>Transformations valides:</p>
+   
+    <div id="resultv"></div>
+
+   
+    <div id="resultc"></div>
+ 
+    <h3>Réparation des contraintes pour les anomalies hybrides</h3>
+    <button id="reparerhyb" class="btn btn-primary">Réparer contraintes</button>
+    <div id="hyb" style="display: none;">
+    </div>
+
+
+    <script>
+        // Récupérer le bouton et la div des dépendances
+        var showDependencesButton = document.getElementById('showDependences');
+        var dependencesDiv = document.getElementById('dependences');
+
+        // Fonction pour afficher les dépendances
+        showDependencesButton.addEventListener('click', function() {
+            // Envoyer une requête AJAX pour récupérer les dépendances depuis /dependances
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/dependances', true);
+
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    // Afficher les dépendances dans la div des dépendances
+                    var dependences = JSON.parse(xhr.responseText);
+                    var dependencesHtml = '<ul>';
+                    for (var i = 0; i < dependences.length; i++) {
+                        dependencesHtml += '<li>' + dependences[i] + '</li>';
+                    }
+                    dependencesHtml += '</ul>';
+                    dependencesDiv.innerHTML = dependencesHtml;
+                }
+            };
+
+            xhr.send();
+            
+            // Afficher la div des dépendances
+            dependencesDiv.style.display = 'block';
+        });
+
+        // Récupérer le bouton et la div des dépendances validées
+        var showValidDependencesButton = document.getElementById('showValidDependences');
+        var validDependencesDiv = document.getElementById('validDependences');
+
+        // Fonction pour afficher les dépendances validées
+        showValidDependencesButton.addEventListener('click', function() {
+            // Envoyer une requête AJAX pour récupérer les dépendances validées depuis /dependancesValides
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/dependancesValides', true);
+
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    // Afficher les dépendances validées dans la div des dépendances validées
+                    var validDependences = JSON.parse(xhr.responseText);
+                    var validDependencesHtml = '<ul>';
+                    for (var i = 0; i < validDependences.length; i++) {
+                        validDependencesHtml += '<li>' + validDependences[i] +'</li>';
+                    }
+                    validDependencesHtml += '</ul>';
+                    validDependencesDiv.innerHTML = validDependencesHtml;
+                }
+            };
+
+            xhr.send();
+            
+            // Afficher la div des dépendances validées
+            validDependencesDiv.style.display = 'block';
+        });
+        
+        // Récupérer le bouton et la div des résultats
+        var checkDependencesButton = document.getElementById('checkDependences');
+        var resultsDiv = document.getElementById('results');
+
+        // Fonction pour identifier les anomalies
+        checkDependencesButton.addEventListener('click', function() {
+    // Envoyer une requête AJAX pour récupérer les résultats depuis /verifie_dependances
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/verifie_dependances', true);
+
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            // Afficher les résultats dans la div des résultats
+            var results = JSON.parse(xhr.responseText);
+            var resultsHtml = '<table style="border-collapse: collapse; width: 100%;">';
+            resultsHtml += '<tr><th style="border: 1px solid #000; padding: 8px;">Contrainte</th><th style="border: 1px solid #000; padding: 8px;">Numéros de lignes de violations</th></tr>';
+            for (var key in results) {
+                if (results.hasOwnProperty(key)) {
+                    resultsHtml += '<tr><td style="border: 1px solid #000; padding: 8px;">' + key + '</td><td style="border: 1px solid #000; padding: 8px;">' + results[key].join(', ') + '</td></tr>';
+                }
+            }
+            resultsHtml += '</table>';
+            resultsDiv.innerHTML = resultsHtml;
+        }
+    };
+
+    xhr.send();
+
+    // Afficher la div des résultats
+    resultsDiv.style.display = 'block';
+});
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+document.getElementById('identifier').addEventListener('click', function () {
+            fetch('/classes')
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (data) {
+                    // Générez le contenu HTML pour le tableau des résultats
+                    var tableHTML = '<table style="border-collapse: collapse; width: 100%;">';
+                        tableHTML += '<tr><th style="border: 1px solid #000; padding: 8px;">Contrainte</th><th style="border: 1px solid #000; padding: 8px;">Source d"anomalie</th></tr>';
+
+                    for (var FD in data) {
+                        if (data.hasOwnProperty(FD)) {
+                            var mesclasses = data[FD];
+                            tableHTML += '<tr><td style="border: 1px solid #000; padding: 8px;">' + FD + '</td><td style="border: 1px solid #000; padding: 8px;">' + mesclasses + '</td></tr>';
+                            
+                        }
+                    }
+
+                    tableHTML += '</tbody></table>';
+
+                    // Insérez le contenu HTML dans la div des résultats
+                    document.getElementById('ident').innerHTML = tableHTML;
+
+                    // Affichez la div des résultats
+                    document.getElementById('ident').style.display = 'block';
+                })
+                .catch(function (error) {
+                    console.error('Erreur lors de la récupération des résultats:', error);
+                });
+        });
+
+        document.querySelector('form').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const contrainteErronee = document.getElementById('contrainte_erronee').value;
+
+    // Envoie de la requête AJAX pour obtenir la réponse JSON
+    fetch(`/generer_contrainte?contrainte_erronee=${encodeURIComponent(contrainteErronee)}`)
+        .then(response => response.json())
+        .then(data => {
+            const contraintesTestees = data.contraintes_testees;
+            const resultElement = document.getElementById('result');
+
+            // Créez une liste non ordonnée pour afficher les éléments
+            const ulElement = document.createElement('ul');
+
+            // Ajoutez chaque élément du tableau comme un élément de liste
+            contraintesTestees.forEach(contrainte => {
+                const liElement = document.createElement('li');
+                liElement.textContent = contrainte;
+                ulElement.appendChild(liElement);
+            });
+
+            // Effacez tout contenu précédent de resultElement
+            resultElement.innerHTML = '';
+
+            // Ajoutez la liste à resultElement
+            resultElement.appendChild(ulElement);
+        })
+        .catch(error => {
+            console.error('Une erreur s\'est produite :', error);
+        });
+});
+
+document.querySelector('form').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const contrainteErronee = document.getElementById('contrainte_erronee').value;
+
+    // Envoie de la requête AJAX pour obtenir la réponse JSON
+    fetch(`/valider?contrainte_erronee=${encodeURIComponent(contrainteErronee)}`)
+        .then(response => response.json())
+        .then(data => {
+            const contraintesTestees = data.contraintes_testees;
+            const resultElement = document.getElementById('resultv');
+
+            // Créez une liste non ordonnée pour afficher les éléments
+            const ulElement = document.createElement('ul');
+
+            // Ajoutez chaque élément du tableau comme un élément de liste
+            contraintesTestees.forEach(contrainte => {
+                const liElement = document.createElement('li');
+                liElement.textContent = contrainte;
+                ulElement.appendChild(liElement);
+            });
+
+            // Effacez tout contenu précédent de resultElement
+            resultElement.innerHTML = '';
+
+            // Ajoutez la liste à resultElement
+            resultElement.appendChild(ulElement);
+        })
+        .catch(error => {
+            console.error('Une erreur s\'est produite :', error);
+        });
+});
+document.querySelector('form').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const contrainteErronee = document.getElementById('contrainte_erronee').value;
+
+    // Envoie de la requête AJAX pour obtenir la réponse JSON
+    fetch(`/select?contrainte_erronee=${encodeURIComponent(contrainteErronee)}`)
+        .then(response => response.json())
+        .then(data => {
+            const resultElement = document.getElementById('resultc');
+            
+            // Formater les données JSON en texte organisé
+            let formattedText = "\n";
+            for (const key in data) {
+                if (data.hasOwnProperty(key)) {
+                    formattedText += `${key}: ${data[key]}\n`;
+                }
+            }
+
+            // Afficher le texte formaté dans resultElement
+            resultElement.textContent = formattedText;
+        })
+        .catch(error => {
+            console.error('Une erreur s\'est produite :', error);
+        });
+});
+
+document.getElementById('reparer').addEventListener('click', function () {
+    // Envoyer une requête AJAX vers /reparer
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/reparer', true);
+
+    xhr.onload = function () {
+        if (xhr.status === 200) {
+            // Traitement des données JSON reçues
+            var result = JSON.parse(xhr.responseText);
+            var repDiv = document.getElementById('rep');
+            
+            // Créez le contenu HTML pour afficher les résultats
+            var resultHtml = '<ul>';
+            for (var i = 0; i < result.length; i++) {
+                resultHtml += '<li><strong>Contrainte erronée:</strong> ' + result[i]["Contrainte erronee"] + '<br><strong>Reparation:</strong> ' + result[i]["Reparation"] + '</li>';
+            }
+            resultHtml += '</ul>';
+
+            // Afficher les résultats dans la div rep
+            repDiv.innerHTML = resultHtml;
+
+            // Afficher la div rep
+            repDiv.style.display = 'block';
+        }
+    };
+
+    xhr.send();
+});
+
+document.getElementById('reparerhyb').addEventListener('click', function () {
+    // Envoyer une requête AJAX vers /reparer
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/reparerhyb', true);
+
+    xhr.onload = function () {
+        if (xhr.status === 200) {
+            // Traitement des données JSON reçues
+            var result = JSON.parse(xhr.responseText);
+            var repDiv = document.getElementById('hyb');
+            
+            // Créez le contenu HTML pour afficher les résultats
+            var resultHtml = '<ul>';
+            for (var i = 0; i < result.length; i++) {
+                resultHtml += '<li><strong>Contrainte erronée:</strong> ' + result[i]["Contrainte erronee"] + '<br><strong>Reparation:</strong> ' + result[i]["Reparation"] + '</li>';
+            }
+            resultHtml += '</ul>';
+
+            // Afficher les résultats dans la div rep
+            repDiv.innerHTML = resultHtml;
+
+            // Afficher la div rep
+            repDiv.style.display = 'block';
+        }
+    };
+
+    xhr.send();
+});
+
+    </script>
+</body>
+</html>
